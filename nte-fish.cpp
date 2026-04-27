@@ -62,7 +62,7 @@ void AutoFishingBot::init() {
                 std::cout << "\n[退出] 检测到 ` 键，终止程序...\n";
                 exit(0);
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
     }).detach();
 }
@@ -116,9 +116,9 @@ void AutoFishingBot::waitUntilAppear(const Template& tpl, double threshold) {
         if (tpl.match(frame)) {
             break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
 void AutoFishingBot::waitUntilAllAppear(const std::vector<Template*>& tpls, double threshold) {
@@ -133,7 +133,7 @@ void AutoFishingBot::waitUntilAllAppear(const std::vector<Template*>& tpls, doub
         if (allMatch) {
             break;
 		}
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
@@ -148,7 +148,7 @@ std::string AutoFishingBot::waitUntilAnyAppear(const std::vector<Template*>& tpl
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
@@ -173,7 +173,7 @@ bool AutoFishingBot::waitForMatch(const Template& tpl, double timeout_seconds, d
         }
 
         // 适当休眠减少 CPU 占用
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
@@ -198,7 +198,7 @@ std::string AutoFishingBot::waitForAnyMatch(const std::vector<Template*>& tpls, 
             return "";
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
@@ -219,7 +219,7 @@ bool AutoFishingBot::waitAndClickUntilGone(const Template& tpl, int key, double 
         keyboard->click(key);
 
         // 等待游戏 UI 动画响应
-        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
         // 检查是否消失
         cv::Mat frame = getScreenshot();
@@ -311,7 +311,7 @@ void AutoFishingBot::waitUntilUiAppear() {
         if (getGreenBar(frame).first != -1 && getYellowCursor(frame) != -1) {
             break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
@@ -368,7 +368,7 @@ void AutoFishingBot::run() {
     Template t_catch("./templates/CATCH.png", 515, 166, 785, 186);
     Template t_close("./templates/CLOSE.png", 573, 646, 711, 661);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     //t_start1.saveDebugImg(getScreenshot());
 
@@ -388,14 +388,14 @@ void AutoFishingBot::run() {
     while (true) {
         waitUntilAllAppear({ &t_ready1, &t_ready2 }, 0.8);
         std::cout << "[就绪] 开始抛竿\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
         keyboard->click('F');
 
 		// 正常抛竿后8秒内要识别到咬钩，否则可能是抛竿失败或已无鱼饵
         if (waitForMatch(t_catch, 8, 0.85)) {
             std::cout << "[咬钩] 开始拉鱼\n";
             keyboard->click('F');
-            startFishBar(50);
+            startFishBar(40);
         } else {
             std::cout << "[系统] 8秒内未识别到 咬钩(CATCH)，可能是抛竿失败或已无鱼饵，将重新抛竿...\n";
             continue;

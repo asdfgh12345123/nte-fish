@@ -41,7 +41,7 @@ public:
         }
     }
 
-    void click(char key, int duration_ms = 100) {
+    void click(char key, int duration_ms = 80) {
         int k = (key >= 'a' && key <= 'z') ? toupper(key) : key;
         keepActive();
         PostMessage(m_hwnd, WM_KEYDOWN, k, 0);
@@ -54,7 +54,7 @@ public:
         LPARAM lParam = MAKELPARAM(x, y);
         keepActive();
         PostMessage(m_hwnd, WM_LBUTTONDOWN, MK_LBUTTON, lParam);
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
         keepActive();
         PostMessage(m_hwnd, WM_LBUTTONUP, 0, lParam);
     }
