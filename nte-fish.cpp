@@ -554,6 +554,16 @@ void AutoFishingBot::run() {
 
             std::cout << "[结束] 已关闭页面\n";
 
+            for (int i = 0; i < 2; ++i) {
+                if (waitForAllMatch({ &t_ready1, &t_ready2 }, 0.4, 0.8)) {
+                    break;
+                }
+
+                std::cout << "[系统] 检测到可能仍在钓鱼准备页，尝试返回待机界面\n";
+                keyboard->click(VK_ESCAPE);
+                std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            }
+
             std::cout << "[系统] 本轮结束 | 已运行: " << minutes << "分" << seconds << "秒 | 总收获: " << m_fishCount << " 条" << std::endl;
         }
         else {
