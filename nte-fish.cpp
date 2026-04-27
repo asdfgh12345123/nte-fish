@@ -492,6 +492,10 @@ void AutoFishingBot::run() {
     Template t_ready2("./templates/READY2.png", 996, 642, 1025, 672);
     Template t_catch("./templates/CATCH.png", 515, 166, 785, 186);
     Template t_close("./templates/CLOSE.png", 573, 646, 711, 661);
+    constexpr int kFishPrepStartX = 1080;
+    constexpr int kFishPrepStartY = 628;
+    constexpr int kFishBaitConfirmX = 775;
+    constexpr int kFishBaitConfirmY = 475;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
@@ -559,9 +563,13 @@ void AutoFishingBot::run() {
                     break;
                 }
 
-                std::cout << "[系统] 检测到可能仍在钓鱼准备页，尝试返回待机界面\n";
-                keyboard->click(VK_ESCAPE);
-                std::this_thread::sleep_for(std::chrono::milliseconds(300));
+                std::cout << "[系统] 检测到可能仍在钓鱼准备页，点击开始钓鱼\n";
+                keyboard->mouseClick(kFishPrepStartX, kFishPrepStartY);
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+                std::cout << "[系统] 如出现鱼饵确认提示，点击确认\n";
+                keyboard->mouseClick(kFishBaitConfirmX, kFishBaitConfirmY);
+                std::this_thread::sleep_for(std::chrono::milliseconds(400));
             }
 
             std::cout << "[系统] 本轮结束 | 已运行: " << minutes << "分" << seconds << "秒 | 总收获: " << m_fishCount << " 条" << std::endl;
