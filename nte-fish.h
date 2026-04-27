@@ -32,6 +32,7 @@ private:
     HDC m_hdcDesktop = nullptr; // 用于 GDI 截图
 
     std::atomic<bool> m_isRunning{ false };
+    std::atomic<bool> m_forceSceneCheck{ false };
     bool m_runtimeStarted = false;
     int m_fishCount = 0;
     std::chrono::steady_clock::time_point m_startTime = std::chrono::steady_clock::now();

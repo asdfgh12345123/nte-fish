@@ -21,7 +21,7 @@ void AutoFishingBot::init() {
     // 提示信息
     std::cout << "    异环-自动钓鱼 v1.4  --by gosick39（幻塔妙妙屋Q群：565943273）\n\n";
     std::cout << "  注意：本程序仅学习使用，禁止商用！\n\n";
-    std::cout << "  使用方法：双击打开.exe，进入钓鱼待机页面（不要按F），按 F8 开始/暂停，按 ` 退出\n\n";
+    std::cout << "  使用方法：双击打开.exe，进入钓鱼待机页面（不要按F），按 F8 开始/继续/重检，按 F9 暂停，按 ` 退出\n\n";
 
     //m_hwnd = FindWindowEx(nullptr, nullptr, L"UnrealWindow", nullptr);
     m_hwnd = FindWindowW(L"UnrealWindow", L"异环  ");
@@ -55,12 +55,13 @@ void AutoFishingBot::init() {
 
     keyboard = new Keyboard(m_hwnd);
 
-    // 启动后台热键监听：F8 开始/暂停，` 退出
+    // 启动后台热键监听：F8 开始/继续/重检，F9 暂停，` 退出
     startHotkeyListener();
 }
 void AutoFishingBot::startHotkeyListener() {
     std::thread([this]() {
         bool f8WasDown = false;
+        bool f9WasDown = false;
         while (true) {
             if (GetAsyncKeyState(VK_OEM_3) & 0x8000) {
                 if (keyboard) keyboard->releaseAll();
@@ -70,15 +71,25 @@ void AutoFishingBot::startHotkeyListener() {
 
             bool f8Down = (GetAsyncKeyState(VK_F8) & 0x8000) != 0;
             if (f8Down && !f8WasDown) {
-                bool next = !m_isRunning.load();
-                m_isRunning.store(next);
-                if (!next && keyboard) keyboard->releaseAll();
-
-                std::cout << (next
-                    ? "\n[热键] F8：开始自动钓鱼\n"
-                    : "\n[热键] F8：暂停自动钓鱼\n");
+                if (!m_isRunning.load()) {
+                    m_isRunning.store(true);
+                    std::cout << "\n[热键] F8：开始/继续自动钓鱼\n";
+                }
+                else {
+                    m_forceSceneCheck.store(true);
+                    std::cout << "\n[热键] F8：重新检查当前钓鱼场景\n";
+                }
             }
             f8WasDown = f8Down;
+
+            bool f9Down = (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
+            if (f9Down && !f9WasDown) {
+                m_isRunning.store(false);
+                m_forceSceneCheck.store(false);
+                if (keyboard) keyboard->releaseAll();
+                std::cout << "\n[热键] F9：暂停自动钓鱼\n";
+            }
+            f9WasDown = f9Down;
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
     }).detach();
@@ -89,7 +100,7 @@ void AutoFishingBot::waitUntilStarted() {
     while (!m_isRunning.load()) {
         if (keyboard) keyboard->releaseAll();
         if (!printed) {
-            std::cout << "[待机] 按 F8 开始/继续自动钓鱼，按 ` 退出\n";
+            std::cout << "[待机] 按 F8 开始/继续自动钓鱼，按 F9 暂停，按 ` 退出\n";
             printed = true;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -197,6 +208,9 @@ bool AutoFishingBot::waitForAllMatch(const std::vector<Template*>& tpls, double 
             waitUntilStarted();
             startTime = std::chrono::steady_clock::now();
         }
+        if (m_forceSceneCheck.exchange(false)) {
+            return false;
+        }
 
         cv::Mat frame = getScreenshot();
         bool allMatch = true;
@@ -229,6 +243,9 @@ bool AutoFishingBot::waitForMatch(const Template& tpl, double timeout_seconds, d
             waitUntilStarted();
             startTime = std::chrono::steady_clock::now();
         }
+        if (m_forceSceneCheck.exchange(false)) {
+            return false;
+        }
 
         // 1. 获取当前截图并进行匹配
         cv::Mat frame = getScreenshot();
@@ -257,6 +274,9 @@ std::string AutoFishingBot::waitForAnyMatch(const std::vector<Template*>& tpls, 
         if (!m_isRunning.load()) {
             waitUntilStarted();
             startTime = std::chrono::steady_clock::now();
+        }
+        if (m_forceSceneCheck.exchange(false)) {
+            return "";
         }
 
         cv::Mat frame = getScreenshot();
@@ -492,6 +512,7 @@ void AutoFishingBot::run() {
 
     while (true) {
         waitUntilStarted();
+        m_forceSceneCheck.store(false);
 
         bool castReady = waitForAllMatch({ &t_ready1, &t_ready2 }, 0.2, 0.8);
         double catchTimeout = 60;
