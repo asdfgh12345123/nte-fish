@@ -147,7 +147,7 @@ void AutoFishingBot::waitUntilAppear(const Template& tpl, double threshold) {
     while (true) {
         waitUntilStarted();
         cv::Mat frame = getScreenshot();
-        if (tpl.match(frame)) {
+        if (tpl.match(frame, threshold)) {
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -248,6 +248,65 @@ std::string AutoFishingBot::waitForAnyMatch(const std::vector<Template*>& tpls, 
     }
 }
 
+bool AutoFishingBot::waitAndClickUntilGone(const Template& tpl, int key, double threshold, double waitTimeout, double clickTimeout) {
+    if (!waitForMatch(tpl, waitTimeout, threshold)) {
+        return false;
+    }
+
+    std::cout << "[流程] 识别到 " << tpl.getTplName() << " ，开始执行点击校验...\n";
+    auto startTime = std::chrono::steady_clock::now();
+
+    while (true) {
+        waitUntilStarted();
+        keyboard->click(key);
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+
+        cv::Mat frame = getScreenshot();
+        if (!tpl.match(frame, threshold)) {
+            return true;
+        }
+
+        auto currentTime = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(currentTime - startTime).count();
+        if (elapsed >= clickTimeout) {
+            return false;
+        }
+
+        std::cout << "[重试] 目标 " << tpl.getTplName() << " 依然存在，再次尝试点击...\n";
+    }
+}
+
+bool AutoFishingBot::clickUntilAnyGone(const std::vector<Template*>& tpls, int key, double threshold, double clickTimeout) {
+    auto startTime = std::chrono::steady_clock::now();
+
+    while (true) {
+        waitUntilStarted();
+        keyboard->click(key);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        cv::Mat frame = getScreenshot();
+        bool stillVisible = false;
+        for (Template* tpl : tpls) {
+            if (tpl && tpl->match(frame, threshold)) {
+                stillVisible = true;
+                break;
+            }
+        }
+
+        if (!stillVisible) {
+            return true;
+        }
+
+        auto currentTime = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(currentTime - startTime).count();
+        if (elapsed >= clickTimeout) {
+            keyboard->releaseAll();
+            return false;
+        }
+
+        std::cout << "[重试] 抛竿按键未生效，仍检测到就绪提示，再次尝试...\n";
+    }
+}
 // ---------------------- Fish Bar 逻辑 ---------------------- //
 
 std::pair<int, int> AutoFishingBot::getGreenBar(const cv::Mat& screenshot) {
@@ -388,6 +447,9 @@ void AutoFishingBot::run() {
 
     std::cout << "[主循环] 已待机，按 F8 开始自动钓鱼...\n";
 
+    // 激活窗口，保持和原作者主流程一致
+    keyboard->keepActive();
+
   //  while (waitForAnyMatch({ &t_start1, &t_start2 }, 2, 0.85) != "") {
   //      std::cout << "[系统] 识别到 开始(START)，进入待机\n";
   //      keyboard->mouseClick(t_start1.getCenterX(), t_start1.getCenterY());
@@ -401,8 +463,10 @@ void AutoFishingBot::run() {
         waitUntilAllAppear({ &t_ready1, &t_ready2 }, 0.8);
         std::cout << "[系统] 识别到 就绪(READY)，开始抛竿\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        waitUntilStarted();
-        keyboard->click('F');
+        if (!clickUntilAnyGone({ &t_ready1, &t_ready2 }, 'F', 0.8, 3)) {
+            std::cout << "[系统] 抛竿按键未生效，仍处于就绪状态，将继续等待...\n";
+            continue;
+        }
 
 		// 正常抛竿后8秒内要识别到咬钩，否则可能是抛竿失败或已无鱼饵
         if (waitForMatch(t_catch, 8, 0.85)) {
@@ -415,8 +479,8 @@ void AutoFishingBot::run() {
             continue;
 		}
     
-        // 正常拉鱼结束后5秒内要识别到关闭页面，否则可能是鱼脱钩
-        if (waitForMatch(t_close, 5, 0.85)) {
+        // 正常拉鱼结束后8秒内要识别到关闭页面，否则可能是鱼脱钩
+        if (waitAndClickUntilGone(t_close, VK_ESCAPE, 0.85, 8, 5)) {
             // 增加计数
             m_fishCount++;
 
@@ -426,8 +490,7 @@ void AutoFishingBot::run() {
             int minutes = static_cast<int>(duration / 60);
             int seconds = static_cast<int>(duration % 60);
 
-            std::cout << "[系统] 识别到 结束(CLOSE)，关闭页面\n";
-            keyboard->click(VK_ESCAPE);
+            std::cout << "[结束] 已关闭页面\n";
 
             std::cout << "[系统] 本轮结束 | 已运行: " << minutes << "分" << seconds << "秒 | 总收获: " << m_fishCount << " 条" << std::endl;
         }

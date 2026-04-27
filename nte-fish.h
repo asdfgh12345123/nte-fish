@@ -44,6 +44,8 @@ private:
     std::string waitUntilAnyAppear(const std::vector<Template*>& tpls, double threshold = 0.85);
     bool waitForMatch(const Template& tpl, double timeout_seconds, double threshold = 0.85);
     std::string waitForAnyMatch(const std::vector<Template*>& tpls, double timeout_seconds, double threshold = 0.85);
+    bool waitAndClickUntilGone(const Template& tpl, int key, double threshold, double waitTimeout, double clickTimeout);
+    bool clickUntilAnyGone(const std::vector<Template*>& tpls, int key, double threshold, double clickTimeout);
     void startFishBar(int interval_ms);
     
     // FishBar相关图像分析

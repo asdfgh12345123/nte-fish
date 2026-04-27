@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <windows.h>
 #include <thread>
 #include <chrono>
@@ -10,15 +10,17 @@ public:
     void keepActive() {
         if (GetForegroundWindow() != m_hwnd) {
 
-            // Í¨Öª´°¿Úµ±Ç°ÊÇ¼¤»î×´Ì¬
+            // é€šçŸ¥çª—å£å½“å‰æ˜¯æ¿€æ´»çŠ¶æ€
             SendMessage(m_hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
 
-            //// 1. ·¢ËÍ¼¤»îÏûÏ¢£º¸æËß´°¿ÚËüÏÖÔÚÊÇ»î¶¯×´Ì¬
+            //// 1. å‘é€æ¿€æ´»æ¶ˆæ¯ï¼šå‘Šè¯‰çª—å£å®ƒç°åœ¨æ˜¯æ´»åŠ¨çŠ¶æ€
             //SendMessage(m_hwnd, WM_ACTIVATE, WA_ACTIVE, 0); 
-            //// 2. ·¢ËÍ·Ç¿Í»§Çø¼¤»î£ºÈ·±£±êÌâÀ¸ºÍ±ß¿òÏÔÊ¾Îª¼¤»îÑÕÉ«
+            //// 2. å‘é€éå®¢æˆ·åŒºæ¿€æ´»ï¼šç¡®ä¿æ ‡é¢˜æ å’Œè¾¹æ¡†æ˜¾ç¤ºä¸ºæ¿€æ´»é¢œè‰²
             //SendMessage(m_hwnd, WM_NCACTIVATE, TRUE, 0);
-            //// 3. Ä£Äâ»ñµÃ½¹µã£ºÈÃ´°¿ÚÈÏÎª¼üÅÌÊäÈëÁ÷ÒÑ¶¨Ïòµ½Ëü
+            //// 3. æ¨¡æ‹Ÿè·å¾—ç„¦ç‚¹ï¼šè®©çª—å£è®¤ä¸ºé”®ç›˜è¾“å…¥æµå·²å®šå‘åˆ°å®ƒ
             //SendMessage(m_hwnd, WM_SETFOCUS, 0, 0);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
 
