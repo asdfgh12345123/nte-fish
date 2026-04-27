@@ -159,10 +159,11 @@ void AutoFishingBot::waitUntilAllAppear(const std::vector<Template*>& tpls, doub
     while (true) {
         waitUntilStarted();
         cv::Mat frame = getScreenshot();
-		bool allMatch = false;
+		bool allMatch = true;
         for (int i = 0; i < tpls.size(); ++i) {
-            if (tpls[i]->match(frame, threshold)) {
-                allMatch = true;
+            if (!tpls[i]->match(frame, threshold)) {
+                allMatch = false;
+                break;
             }
         }
         if (allMatch) {
@@ -182,6 +183,37 @@ std::string AutoFishingBot::waitUntilAnyAppear(const std::vector<Template*>& tpl
             if (tpls[i]->match(frame, threshold)) {
                 return tpls[i]->getTplName();
             }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+bool AutoFishingBot::waitForAllMatch(const std::vector<Template*>& tpls, double timeout_seconds, double threshold) {
+    auto startTime = std::chrono::steady_clock::now();
+
+    while (true) {
+        if (!m_isRunning.load()) {
+            waitUntilStarted();
+            startTime = std::chrono::steady_clock::now();
+        }
+
+        cv::Mat frame = getScreenshot();
+        bool allMatch = true;
+        for (Template* tpl : tpls) {
+            if (!tpl || !tpl->match(frame, threshold)) {
+                allMatch = false;
+                break;
+            }
+        }
+        if (allMatch) {
+            return true;
+        }
+
+        auto currentTime = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(currentTime - startTime).count();
+        if (elapsed >= timeout_seconds) {
+            return false;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -460,22 +492,31 @@ void AutoFishingBot::run() {
 
     while (true) {
         waitUntilStarted();
-        waitUntilAllAppear({ &t_ready1, &t_ready2 }, 0.8);
-        std::cout << "[系统] 识别到 就绪(READY)，开始抛竿\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        if (!clickUntilAnyGone({ &t_ready1, &t_ready2 }, 'F', 0.8, 3)) {
-            std::cout << "[系统] 抛竿按键未生效，仍处于就绪状态，将继续等待...\n";
-            continue;
+
+        bool castReady = waitForAllMatch({ &t_ready1, &t_ready2 }, 1, 0.8);
+        double catchTimeout = 60;
+
+        if (castReady) {
+            std::cout << "[系统] 识别到 就绪(READY)，开始抛竿\n";
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            if (!clickUntilAnyGone({ &t_ready1, &t_ready2 }, 'F', 0.8, 3)) {
+                std::cout << "[系统] 抛竿按键未生效，仍处于就绪状态，将继续等待...\n";
+                continue;
+            }
+            catchTimeout = 12;
+        }
+        else {
+            std::cout << "[系统] 未检测到就绪按钮，可能已抛竿，继续等待咬钩(CATCH)...\n";
         }
 
-		// 正常抛竿后8秒内要识别到咬钩，否则可能是抛竿失败或已无鱼饵
-        if (waitForMatch(t_catch, 8, 0.85)) {
+		// 已抛竿状态下继续等待咬钩；从待机抛竿后也给游戏留出响应时间
+        if (waitForMatch(t_catch, catchTimeout, 0.85)) {
             std::cout << "[系统] 识别到 咬钩(CATCH)，开始拉鱼\n";
             waitUntilStarted();
             keyboard->click('F');
             startFishBar(50);
         } else {
-            std::cout << "[系统] 8秒内未识别到 咬钩(CATCH)，可能是抛竿失败或已无鱼饵，将重新抛竿...\n";
+            std::cout << "[系统] 暂未识别到 咬钩(CATCH)，将继续检查当前钓鱼状态...\n";
             continue;
 		}
     

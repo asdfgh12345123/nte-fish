@@ -42,6 +42,7 @@ private:
     void waitUntilAppear(const Template& tpl, double threshold = 0.85);
     void waitUntilAllAppear(const std::vector<Template*>& tpls, double threshold = 0.85);
     std::string waitUntilAnyAppear(const std::vector<Template*>& tpls, double threshold = 0.85);
+    bool waitForAllMatch(const std::vector<Template*>& tpls, double timeout_seconds, double threshold = 0.85);
     bool waitForMatch(const Template& tpl, double timeout_seconds, double threshold = 0.85);
     std::string waitForAnyMatch(const std::vector<Template*>& tpls, double timeout_seconds, double threshold = 0.85);
     bool waitAndClickUntilGone(const Template& tpl, int key, double threshold, double waitTimeout, double clickTimeout);
