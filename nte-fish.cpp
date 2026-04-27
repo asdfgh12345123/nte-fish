@@ -90,7 +90,7 @@ void AutoFishingBot::startHotkeyListener() {
                 std::cout << "\n[热键] F9：暂停自动钓鱼\n";
             }
             f9WasDown = f9Down;
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(25));
         }
     }).detach();
 }
@@ -103,7 +103,7 @@ void AutoFishingBot::waitUntilStarted() {
             std::cout << "[待机] 按 F8 开始/继续自动钓鱼，按 F9 暂停，按 ` 退出\n";
             printed = true;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 
     if (!m_runtimeStarted) {
@@ -161,9 +161,9 @@ void AutoFishingBot::waitUntilAppear(const Template& tpl, double threshold) {
         if (tpl.match(frame, threshold)) {
             break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 void AutoFishingBot::waitUntilAllAppear(const std::vector<Template*>& tpls, double threshold) {
@@ -180,7 +180,7 @@ void AutoFishingBot::waitUntilAllAppear(const std::vector<Template*>& tpls, doub
         if (allMatch) {
             break;
 		}
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 }
 
@@ -196,7 +196,7 @@ std::string AutoFishingBot::waitUntilAnyAppear(const std::vector<Template*>& tpl
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 }
 
@@ -230,7 +230,7 @@ bool AutoFishingBot::waitForAllMatch(const std::vector<Template*>& tpls, double 
             return false;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 }
 
@@ -263,7 +263,7 @@ bool AutoFishingBot::waitForMatch(const Template& tpl, double timeout_seconds, d
         }
 
         // 适当休眠减少 CPU 占用
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 }
 
@@ -296,7 +296,7 @@ std::string AutoFishingBot::waitForAnyMatch(const std::vector<Template*>& tpls, 
             return "";
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 }
 
@@ -311,7 +311,7 @@ bool AutoFishingBot::waitAndClickUntilGone(const Template& tpl, int key, double 
     while (true) {
         waitUntilStarted();
         keyboard->click(key);
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
         cv::Mat frame = getScreenshot();
         if (!tpl.match(frame, threshold)) {
@@ -334,7 +334,7 @@ bool AutoFishingBot::clickUntilAnyGone(const std::vector<Template*>& tpls, int k
     while (true) {
         waitUntilStarted();
         keyboard->click(key);
-        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        std::this_thread::sleep_for(std::chrono::milliseconds(80));
 
         cv::Mat frame = getScreenshot();
         bool stillVisible = false;
@@ -430,7 +430,7 @@ void AutoFishingBot::waitUntilUiAppear() {
         if (getGreenBar(frame).first != -1 && getYellowCursor(frame) != -1) {
             break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 }
 
@@ -493,7 +493,7 @@ void AutoFishingBot::run() {
     Template t_catch("./templates/CATCH.png", 515, 166, 785, 186);
     Template t_close("./templates/CLOSE.png", 573, 646, 711, 661);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     //t_start1.saveDebugImg(getScreenshot());
 
@@ -514,12 +514,12 @@ void AutoFishingBot::run() {
         waitUntilStarted();
         m_forceSceneCheck.store(false);
 
-        bool castReady = waitForAllMatch({ &t_ready1, &t_ready2 }, 0.2, 0.8);
+        bool castReady = waitForAllMatch({ &t_ready1, &t_ready2 }, 0.12, 0.8);
         double catchTimeout = 60;
 
         if (castReady) {
             std::cout << "[系统] 识别到 就绪(READY)，开始抛竿\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            std::this_thread::sleep_for(std::chrono::milliseconds(80));
             if (!clickUntilAnyGone({ &t_ready1, &t_ready2 }, 'F', 0.8, 3)) {
                 std::cout << "[系统] 抛竿按键未生效，仍处于就绪状态，将继续等待...\n";
                 continue;
@@ -535,7 +535,7 @@ void AutoFishingBot::run() {
             std::cout << "[系统] 识别到 咬钩(CATCH)，开始拉鱼\n";
             waitUntilStarted();
             keyboard->click('F');
-            startFishBar(50);
+            startFishBar(40);
         } else {
             std::cout << "[系统] 暂未识别到 咬钩(CATCH)，将继续检查当前钓鱼状态...\n";
             continue;
