@@ -21,7 +21,7 @@ void AutoFishingBot::init() {
     // 提示信息
     std::cout << "    异环-自动钓鱼 v1.4  --by gosick39（幻塔妙妙屋Q群：565943273）\n\n";
     std::cout << "  注意：本程序仅学习使用，禁止商用！\n\n";
-    std::cout << "  使用方法：双击打开.exe，进入钓鱼待机页面（不要按F），退出键`\n\n";
+    std::cout << "  使用方法：双击打开.exe，进入钓鱼待机页面（不要按F），按 F8 开始/暂停，按 ` 退出\n\n";
 
     //m_hwnd = FindWindowEx(nullptr, nullptr, L"UnrealWindow", nullptr);
     m_hwnd = FindWindowW(L"UnrealWindow", L"异环  ");
@@ -55,18 +55,51 @@ void AutoFishingBot::init() {
 
     keyboard = new Keyboard(m_hwnd);
 
-    // 启动后台监听退出的按键 `
-    std::thread([]() {
+    // 启动后台热键监听：F8 开始/暂停，` 退出
+    startHotkeyListener();
+}
+void AutoFishingBot::startHotkeyListener() {
+    std::thread([this]() {
+        bool f8WasDown = false;
         while (true) {
             if (GetAsyncKeyState(VK_OEM_3) & 0x8000) {
+                if (keyboard) keyboard->releaseAll();
                 std::cout << "\n[退出] 检测到 ` 键，终止程序...\n";
                 exit(0);
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            bool f8Down = (GetAsyncKeyState(VK_F8) & 0x8000) != 0;
+            if (f8Down && !f8WasDown) {
+                bool next = !m_isRunning.load();
+                m_isRunning.store(next);
+                if (!next && keyboard) keyboard->releaseAll();
+
+                std::cout << (next
+                    ? "\n[热键] F8：开始自动钓鱼\n"
+                    : "\n[热键] F8：暂停自动钓鱼\n");
+            }
+            f8WasDown = f8Down;
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
     }).detach();
 }
 
+void AutoFishingBot::waitUntilStarted() {
+    bool printed = false;
+    while (!m_isRunning.load()) {
+        if (keyboard) keyboard->releaseAll();
+        if (!printed) {
+            std::cout << "[待机] 按 F8 开始/继续自动钓鱼，按 ` 退出\n";
+            printed = true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    if (!m_runtimeStarted) {
+        m_startTime = std::chrono::steady_clock::now();
+        m_runtimeStarted = true;
+    }
+}
 cv::Mat AutoFishingBot::getScreenshot() {
     int width = 1280;
     int height = 720;
@@ -112,6 +145,7 @@ cv::Mat AutoFishingBot::getScreenshot() {
 
 void AutoFishingBot::waitUntilAppear(const Template& tpl, double threshold) {
     while (true) {
+        waitUntilStarted();
         cv::Mat frame = getScreenshot();
         if (tpl.match(frame)) {
             break;
@@ -123,6 +157,7 @@ void AutoFishingBot::waitUntilAppear(const Template& tpl, double threshold) {
 
 void AutoFishingBot::waitUntilAllAppear(const std::vector<Template*>& tpls, double threshold) {
     while (true) {
+        waitUntilStarted();
         cv::Mat frame = getScreenshot();
 		bool allMatch = false;
         for (int i = 0; i < tpls.size(); ++i) {
@@ -139,6 +174,7 @@ void AutoFishingBot::waitUntilAllAppear(const std::vector<Template*>& tpls, doub
 
 std::string AutoFishingBot::waitUntilAnyAppear(const std::vector<Template*>& tpls, double threshold) {
     while (true) {
+        waitUntilStarted();
         cv::Mat frame = getScreenshot();
 
         // 核心逻辑：遍历所有模板，共用同一张截图 frame
@@ -157,6 +193,11 @@ bool AutoFishingBot::waitForMatch(const Template& tpl, double timeout_seconds, d
     auto startTime = std::chrono::steady_clock::now();
 
     while (true) {
+        if (!m_isRunning.load()) {
+            waitUntilStarted();
+            startTime = std::chrono::steady_clock::now();
+        }
+
         // 1. 获取当前截图并进行匹配
         cv::Mat frame = getScreenshot();
         if (tpl.match(frame, threshold)) {
@@ -181,6 +222,11 @@ std::string AutoFishingBot::waitForAnyMatch(const std::vector<Template*>& tpls, 
     auto startTime = std::chrono::steady_clock::now();
 
     while (true) {
+        if (!m_isRunning.load()) {
+            waitUntilStarted();
+            startTime = std::chrono::steady_clock::now();
+        }
+
         cv::Mat frame = getScreenshot();
 
         // 1. 遍历匹配所有模板
@@ -281,6 +327,12 @@ void AutoFishingBot::startFishBar(int interval_ms) {
 
     int missing_green_bar_count = 0;
     while (true) {
+        if (!m_isRunning.load()) {
+            keyboard->releaseAll();
+            waitUntilStarted();
+            missing_green_bar_count = 0;
+        }
+
         //auto t1 = std::chrono::high_resolution_clock::now();
 
         cv::Mat frame = getScreenshot();
@@ -334,7 +386,7 @@ void AutoFishingBot::run() {
 
     //t_start1.saveDebugImg(getScreenshot());
 
-    std::cout << "[主循环] 等待抛竿状态...\n";
+    std::cout << "[主循环] 已待机，按 F8 开始自动钓鱼...\n";
 
   //  while (waitForAnyMatch({ &t_start1, &t_start2 }, 2, 0.85) != "") {
   //      std::cout << "[系统] 识别到 开始(START)，进入待机\n";
@@ -345,14 +397,17 @@ void AutoFishingBot::run() {
   //  }
 
     while (true) {
+        waitUntilStarted();
         waitUntilAllAppear({ &t_ready1, &t_ready2 }, 0.8);
         std::cout << "[系统] 识别到 就绪(READY)，开始抛竿\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        waitUntilStarted();
         keyboard->click('F');
 
 		// 正常抛竿后8秒内要识别到咬钩，否则可能是抛竿失败或已无鱼饵
         if (waitForMatch(t_catch, 8, 0.85)) {
             std::cout << "[系统] 识别到 咬钩(CATCH)，开始拉鱼\n";
+            waitUntilStarted();
             keyboard->click('F');
             startFishBar(50);
         } else {

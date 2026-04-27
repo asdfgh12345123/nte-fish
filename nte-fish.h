@@ -1,7 +1,8 @@
-#pragma once
+ï»¿#pragma once
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <atomic>
 #include <windows.h>
 #include <opencv2/opencv.hpp>
 #include "WGCCapturer.h"
@@ -27,12 +28,16 @@ public:
 private:
     HWND m_hwnd = nullptr;
     WGCCapturer m_wgcCapturer;
-    bool m_useWGC = true;      // ÊÇ·ñÊ¹ÓÃWGC
-    HDC m_hdcDesktop = nullptr; // ÓÃÓÚ GDI ½ØÍ¼
+    bool m_useWGC = true;      // æ˜¯å¦ä½¿ç”¨WGC
+    HDC m_hdcDesktop = nullptr; // ç”¨äº GDI æˆªå›¾
 
+    std::atomic<bool> m_isRunning{ false };
+    bool m_runtimeStarted = false;
     int m_fishCount = 0;
     std::chrono::steady_clock::time_point m_startTime = std::chrono::steady_clock::now();
     
+    void startHotkeyListener();
+    void waitUntilStarted();
     void waitUntilWindowFocus();
     void waitUntilAppear(const Template& tpl, double threshold = 0.85);
     void waitUntilAllAppear(const std::vector<Template*>& tpls, double threshold = 0.85);
@@ -41,7 +46,7 @@ private:
     std::string waitForAnyMatch(const std::vector<Template*>& tpls, double timeout_seconds, double threshold = 0.85);
     void startFishBar(int interval_ms);
     
-    // FishBarÏà¹ØÍ¼Ïñ·ÖÎö
+    // FishBarç›¸å…³å›¾åƒåˆ†æ
     std::pair<int, int> getGreenBar(const cv::Mat& screenshot);
     int getYellowCursor(const cv::Mat& screenshot);
     void waitUntilUiAppear();
